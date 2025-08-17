@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kids Number Quest · 4 Levels</title>
+  <style>
+    :root{--bg1:#111827;--bg2:#1f2937;--accent:#22d3ee;--accent2:#a78bfa}
+    *{box-sizing:border-box}
+    body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:radial-gradient(1200px 800px at 20% 10%, #0b1020, transparent),radial-gradient(1000px 600px at 80% 90%, #0b1a2a, transparent),linear-gradient(135deg,var(--bg1),var(--bg2));color:#e5e7eb;font-family:system-ui,Arial}
+    .screen{display:none;width:min(860px,94%)}
+    .screen.active{display:block}
+    .card{padding:28px 24px;border-radius:20px;background:rgba(255,255,255,0.06);backdrop-filter:blur(10px);box-shadow:0 10px 30px rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.08)}
+    h1{margin:0 0 6px;font-size:clamp(28px,4vw,40px)}
+    .subtitle{opacity:.9;margin:0 0 18px}
+    .row{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:10px}
+    input[type=number],input[type=text]{width:180px;padding:12px;border-radius:12px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.08);color:#fff;font-size:18px;outline:none}
+    input::placeholder{color:#b9c1ce}
+    button{padding:12px 18px;border-radius:12px;border:0;font-weight:700;cursor:pointer;transition:transform .08s ease}
+    .primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#0b1020}
+    .ghost{background:rgba(255,255,255,.08);color:#e5e7eb;border:1px solid rgba(255,255,255,.12)}
+    .danger{background:#ef4444;color:#fff}
+    .result{margin:14px 0;min-height:28px;font-size:18px;font-weight:700}
+    .stats{display:flex;gap:16px;justify-content:center;margin-top:10px;font-size:14px;opacity:.9}
+    .shake{animation:shake .35s ease}
+    @keyframes shake{10%,90%{transform:translateX(-2px)}20%,80%{transform:translateX(4px)}30%,50%,70%{transform:translateX(-6px)}40%,60%{transform:translateX(6px)}}
+    .meter{height:12px;border-radius:999px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);overflow:hidden;margin:6px 0 0}
+    .meter>i{display:block;height:100%;width:0;background:linear-gradient(90deg,#64748b,#93c5fd,#22d3ee)}
+    .confetti{position:fixed;inset:0;pointer-events:none}
+    .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px}
+    .pill{padding:6px 10px;border:1px solid rgba(255,255,255,.15);border-radius:999px;background:rgba(255,255,255,.06);font-size:12px}
+    /* Level 4 styles */
+    .timer{height:12px;border-radius:999px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);overflow:hidden;margin:8px 0 10px}
+    .timer>i{display:block;height:100%;width:100%;background:linear-gradient(90deg,#34d399,#3b82f6);transition:width .15s linear}
+    .grid{display:grid;grid-template-columns:repeat(5, minmax(0,1fr));gap:10px;margin-top:8px}
+    .bubble{aspect-ratio:1/1;border-radius:999px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:20px;
+      background:linear-gradient(135deg,rgba(255,255,255,.95),rgba(255,255,255,.85));color:#111;border:2px solid rgba(0,0,0,.08);cursor:pointer;user-select:none;box-shadow:0 6px 14px rgba(0,0,0,.25)}
+    .bubble:active{transform:translateY(1px)}
+    .bubble.pop{animation:pop .25s ease}
+    .bubble.done{opacity:.45; filter:saturate(.4)}
+    @keyframes pop{from{transform:scale(1)}70%{transform:scale(1.12)}to{transform:scale(1)}}
+
+    /* Modal */
+    .modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.55);z-index:50}
+    .modal.open{display:flex}
+    .modal .panel{width:min(640px,94%);background:rgba(255,255,255,.97);color:#0b1020;border-radius:18px;padding:22px;box-shadow:0 20px 60px rgba(0,0,0,.35)}
+    .modal h2{margin:0 0 8px}
+    .scorelist{margin:10px 0 0;padding:0;list-style:none}
+    .scorelist li{padding:8px 10px;border-radius:10px;background:#f3f4f6;margin:6px 0;font-weight:700}
+    .motivate{margin-top:12px;font-weight:700}
+     #footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background: #333;
+  color: white;
+  padding: 10px;
+  font-size: 14px;
+  text-align: center;
+}
+  </style>
+</head>
+<body>
+  <canvas id="confetti" class="confetti"></canvas>
+
+  <!-- LEVEL 1: Guess the Number (1–100) -->
+  <section id="screen1" class="screen active">
+    <div class="card" id="game">
+      <div class="topbar">
+        <h1>Level 1 · Guess the Number</h1>
+        <span class="pill">Range: 1–100</span>
+      </div>
+      <p class="subtitle">Find the secret number. Hints: <em>Very Close</em> / <em>Hot</em> / <em>Cold</em>.</p>
+
+      <div class="row">
+        <input type="number" id="guess" placeholder="Your guess (1–100)" min="1" max="100" />
+        <button id="submitBtn" class="primary" type="button">✨ Submit</button>
+        <button id="restartBtn" class="ghost" type="button">↻ Play again</button>
+        <button id="surrenderBtn" class="danger" type="button">⚑ Surrender</button>
+      </div>
+
+      <div class="result" id="result"></div>
+      <div class="meter"><i id="heat"></i></div>
+      <div class="stats"><span id="attempts">Attempts: 0</span><span id="best">Best: —</span></div>
+
+      <div class="row" id="nextRow" style="display:none;margin-top:16px">
+        <button id="nextLevelBtn" class="primary" type="button">➡️ Next Level</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- LEVEL 2: Math Sprint -->
+  <section id="screen2" class="screen">
+    <div class="card">
+      <div class="topbar">
+        <h1>Level 2 · Math Sprint (10)</h1>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span class="pill" id="l2progress">Q 1 / 10</span>
+          <span class="pill" id="l2score">Score: 0</span>
+        </div>
+      </div>
+      <p class="subtitle">Answer quick, simple problems in addition, subtraction, multiplication, or division.</p>
+
+      <div class="row" style="margin-top:8px"><div id="l2q" style="font-size:28px;font-weight:700"></div></div>
+      <div class="row">
+        <input type="number" id="l2answer" placeholder="Your answer" />
+        <button id="l2submit" class="primary" type="button">Submit</button>
+        <button id="l2skip" class="ghost" type="button">Skip</button>
+      </div>
+      <div class="result" id="l2result"></div>
+
+      <div class="row" id="l2finalRow" style="display:none">
+        <button id="l2restart" class="ghost" type="button">⟲ Replay Level 2</button>
+        <button id="backToL1" class="primary" type="button">⟵ Back to Level 1</button>
+        <button id="toLevel3" class="primary" type="button">➡️ Next Level</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- LEVEL 3: Memory Challenge (7 rounds) -->
+  <section id="screen3" class="screen">
+    <div class="card">
+      <div class="topbar">
+        <h1>Level 3 · Memory Challenge</h1>
+        <span class="pill" id="l3progress">Round 1 / 7</span>
+      </div>
+      <p class="subtitle">Watch the sequence, then type it. It grows each round.</p>
+
+      <div class="row" style="margin-top:8px"><div id="l3seq" style="font-size:28px;font-weight:700;letter-spacing:2px"></div></div>
+      <div class="row">
+        <input type="text" id="l3answer" placeholder="Type the sequence" />
+        <button id="l3show" class="ghost" type="button">Show sequence</button>
+        <button id="l3submit" class="primary" type="button">Submit</button>
+      </div>
+      <div class="result" id="l3result"></div>
+
+      <div class="row" id="l3finalRow" style="display:none">
+        <button id="l3replay" class="ghost" type="button">⟲ Replay Level 3</button>
+        <button id="toLevel4" class="primary" type="button">➡️ Next Level</button>
+        <button id="l3end" class="ghost" type="button">🏁 End Game</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- LEVEL 4: Number Chase (15 bubbles, 7s each, finish only when all found) -->
+  <section id="screen4" class="screen">
+    <div class="card">
+      <div class="topbar">
+        <h1>Level 4 · Number Chase</h1>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span class="pill" id="l4progress">Found 0 / 15</span>
+          <span class="pill" id="l4attempts">Attempts: 0</span>
+          <span class="pill" id="l4accuracy">Accuracy: 0%</span>
+        </div>
+      </div>
+      <p class="subtitle">Pop the right number before time runs out. Find all 15 to finish!</p>
+      <div id="l4prompt" class="result" style="min-height:auto">Find number: —</div>
+      <div class="timer"><i id="l4time"></i></div>
+      <div id="l4grid" class="grid"></div>
+      <div class="result" id="l4result"></div>
+      <div class="row" id="l4finalRow" style="display:none">
+        <button id="l4replay" class="ghost" type="button">⟲ Replay Level 4</button>
+        <button id="l4back" class="primary" type="button">⟵ Back to Level 1</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Final Modal (after Level 4) -->
+  <div id="finalModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="finalTitle">
+    <div class="panel">
+      <h2 id="finalTitle">🎉 Congratulations — All four round completed!</h2>
+      <p>Great work! Ready to see how you did?</p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px">
+        <button id="viewScores" class="primary">View Scores</button>
+        <button id="closeModal" class="ghost">Close</button>
+      </div>
+      <div id="scoresBox" style="display:none;margin-top:12px">
+        <ul class="scorelist" id="scoreList"></ul>
+        <div class="motivate" id="motivateText"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const $ = id => document.getElementById(id);
+    function randInt(min, max){ return Math.floor(Math.random()*(max-min+1))+min; }
+
+    // confetti
+    function confettiBurst(){
+      const canvas = $('confetti'); if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const W = canvas.width = window.innerWidth;
+      const H = canvas.height = window.innerHeight;
+      const pieces = Array.from({length: 120}, () => ({ x: Math.random()*W, y: -20, r: 6+Math.random()*6, vx: -2+Math.random()*4, vy: 2+Math.random()*3, a: Math.random()*Math.PI }));
+      let t = 0; const dur = 90;
+      (function draw(){ ctx.clearRect(0,0,W,H); t++; pieces.forEach(p=>{ p.x+=p.vx; p.y+=p.vy; p.a+=.07; ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.a); ctx.fillStyle = `hsl(${(p.x+p.y)%360},90%,60%)`; ctx.fillRect(-p.r/2,-p.r/2,p.r,p.r); ctx.restore();}); if (t<dur) requestAnimationFrame(draw); else ctx.clearRect(0,0,W,H); })();
+    }
+
+    const screen1 = $('screen1'), screen2 = $('screen2'), screen3 = $('screen3'), screen4 = $('screen4');
+    function swapTo(screen){ [screen1,screen2,screen3,screen4].forEach(s=>s && s.classList.remove('active')); screen.classList.add('active'); }
+
+    // ===== Global Scores =====
+    let scoreL1 = 0;          // derived from attempts
+    let scoreL2 = 0;          // 0..10
+    let scoreL3 = 0;          // 0 or 100 (completed)
+    let scoreL4 = 0;          // accuracy %
+
+    // ===== Level 1 =====
+    let number = randInt(1,100), attempts = 0; // 1..100
+    let best = Number(localStorage.getItem('guess_best_1to100')) || null;
+
+    const guessInput = $('guess');
+    const resultEl  = $('result');
+    const submitBtn = $('submitBtn');
+    const restartBtn= $('restartBtn');
+    const surrenderBtn= $('surrenderBtn');
+    const attemptsEl= $('attempts');
+    const bestEl    = $('best');
+    const heatBar   = $('heat');
+    const card      = $('game');
+    const nextRow   = $('nextRow');
+    const nextBtn   = $('nextLevelBtn');
+
+    if (best) bestEl.textContent = `Best: ${best}`;
+    if (heatBar) heatBar.style.width = '4%';
+
+    function setResult(msg, shake=false){ resultEl.textContent = msg; if (shake){ card.classList.remove('shake'); void card.offsetWidth; card.classList.add('shake'); } }
+    function proximityText(guess, target){ const diff = Math.abs(guess - target); if (diff <= 2) return 'Very Close'; if (diff <= 8) return 'Hot'; return 'Cold'; }
+    function updateHeat(diff){ if (!heatBar) return; const pct = Math.max(4, Math.min(100, 100 - diff*1.1)); heatBar.style.width = pct + '%'; }
+
+    function checkGuess(){
+      const guess = parseInt(guessInput.value);
+      if (Number.isNaN(guess)){ setResult('Enter a number 1–100.'); return; }
+      if (guess < 1 || guess > 100){ setResult('Stay within 1–100.'); return; }
+      attempts++; attemptsEl.textContent = `Attempts: ${attempts}`;
+      if (guess === number){
+        setResult('🎉 Correct!');
+        if (!best || attempts < best){ best = attempts; localStorage.setItem('guess_best_1to100', String(best)); bestEl.textContent = `Best: ${best}`; }
+        updateHeat(0); confettiBurst(); nextRow.style.display = 'flex';
+        // simple L1 score: fewer attempts → higher score
+        scoreL1 = Math.max(10, 110 - attempts*10); // 100 if guessed first try, floors at 10
+        return;
+      }
+      const diff = Math.abs(guess - number); updateHeat(diff); setResult(proximityText(guess, number), true);
+    }
+
+    function restartGame(){ number = randInt(1,100); attempts = 0; attemptsEl.textContent = 'Attempts: 0'; guessInput.value = ''; setResult('Game restarted! Enter a new guess.'); if (heatBar) heatBar.style.width = '4%'; nextRow.style.display = 'none'; guessInput.focus(); }
+    function surrender(){ setResult(`You surrendered. The number was ${number}.`); scoreL1 = 10; nextRow.style.display = 'flex'; }
+
+    if (submitBtn) submitBtn.addEventListener('click', checkGuess);
+    if (restartBtn) restartBtn.addEventListener('click', restartGame);
+    if (surrenderBtn) surrenderBtn.addEventListener('click', surrender);
+    if (guessInput) guessInput.addEventListener('keydown', e => { if (e.key==='Enter') checkGuess(); });
+
+    // ===== Level 2 =====
+    let l2Index = 0, l2Score = 0, l2Current = null; // {text, answer}
+    const l2q = $('l2q'), l2answer = $('l2answer'), l2submit = $('l2submit'), l2skip = $('l2skip');
+    const l2result = $('l2result'), l2progress = $('l2progress'), l2score = $('l2score');
+    const l2restart = $('l2restart'), backToL1 = $('backToL1'), l2finalRow = $('l2finalRow'), toLevel3 = $('toLevel3');
+
+    function makeEasy(){ const a = randInt(0,9), b = randInt(0,9); if (Math.random()<0.5) return {text:`${a} + ${b} = ?`, answer:a+b}; const x=a+b, y=a; return {text:`${x} − ${y} = ?`, answer:x-y}; }
+    function makeMedium(){ const op = ['+','-','×','÷'][randInt(0,3)]; if (op==='+'){ const a=randInt(5,30), b=randInt(5,30); return {text:`${a} + ${b} = ?`, answer:a+b}; } if (op==='-'){ const a=randInt(20,60), b=randInt(5,20); return {text:`${a} − ${b} = ?`, answer:a-b}; } if (op==='×'){ const a=randInt(2,9), b=randInt(2,9); return {text:`${a} × ${b} = ?`, answer:a*b}; } const b=randInt(2,9); const a=b*randInt(2,12); return {text:`${a} ÷ ${b} = ?`, answer:Math.floor(a/b)}; }
+    function makeTricky(){ const op = ['+','-','×','÷'][randInt(0,3)]; if (op==='+'){ const a=randInt(40,100), b=randInt(10,60); return {text:`${a} + ${b} = ?`, answer:a+b}; } if (op==='-'){ const a=randInt(80,150), b=randInt(30,80); return {text:`${a} − ${b} = ?`, answer:a-b}; } if (op==='×'){ const a=randInt(6,12), b=randInt(6,12); return {text:`${a} × ${b} = ?`, answer:a*b}; } const b=randInt(3,12); const a=b*randInt(5,20); return {text:`${a} ÷ ${b} = ?`, answer:Math.floor(a/b)}; }
+
+    function newL2Question(first){ if (first){ const a = randInt(1, number-1); l2Current = {text:`${a} + ${number - a} = ?`, answer:number}; } else { if (l2Index < 3) l2Current = makeEasy(); else if (l2Index < 7) l2Current = makeMedium(); else l2Current = makeTricky(); } l2q.textContent = l2Current.text; l2answer.value=''; l2result.textContent=''; }
+
+    function submitL2(){ const val = parseInt(l2answer.value); if (Number.isNaN(val)){ l2result.textContent = 'Enter a valid answer.'; return; } if (val === l2Current.answer){ l2result.textContent = '✅ Correct'; l2Score++; l2score.textContent = `Score: ${l2Score}`; } else { l2result.textContent = '❌ Incorrect'; }
+      l2Index++; if (l2Index >= 10){ l2progress.textContent = 'Done!'; l2result.textContent += `  |  Final Score: ${l2Score} / 10`; l2finalRow.style.display = 'flex'; scoreL2 = l2Score; return; }
+      l2progress.textContent = `Q ${l2Index+1} / 10`; newL2Question(false); l2answer.focus(); }
+    function skipL2(){ l2Index++; if (l2Index >= 10){ l2progress.textContent = 'Done!'; l2result.textContent = `Final Score: ${l2Score} / 10`; l2finalRow.style.display = 'flex'; scoreL2 = l2Score; return; } l2progress.textContent = `Q ${l2Index+1} / 10`; newL2Question(false); l2answer.focus(); }
+
+    if ($('nextLevelBtn')) $('nextLevelBtn').addEventListener('click', ()=>{ l2Index=0; l2Score=0; l2finalRow.style.display='none'; l2score.textContent='Score: 0'; l2progress.textContent='Q 1 / 10'; newL2Question(true); swapTo(screen2); l2answer.focus(); });
+    if (l2submit) l2submit.addEventListener('click', submitL2);
+    if (l2skip) l2skip.addEventListener('click', skipL2);
+    if (l2answer) l2answer.addEventListener('keydown', e => { if (e.key==='Enter') submitL2(); });
+    if (l2restart) l2restart.addEventListener('click', ()=>{ l2Index=0; l2Score=0; l2score.textContent='Score: 0'; l2progress.textContent='Q 1 / 10'; l2finalRow.style.display='none'; newL2Question(true); l2answer.focus(); });
+    if (backToL1) backToL1.addEventListener('click', ()=>{ swapTo(screen1); restartGame(); });
+    if (toLevel3) toLevel3.addEventListener('click', ()=>{ l3Reset(); swapTo(screen3); l3Show(); });
+
+    // ===== Level 3 (7 rounds) =====
+    const l3seq = $('l3seq'), l3answer = $('l3answer'), l3show = $('l3show');
+    const l3submit = $('l3submit'), l3result = $('l3result'), l3progress = $('l3progress');
+    const l3finalRow = $('l3finalRow'), l3replay = $('l3replay'), l3end = $('l3end'), toLevel4 = $('toLevel4');
+
+    const L3_ROUNDS = 7; let l3Round = 1; let l3Current = [];
+    function l3Reset(){ l3Round=1; l3Current=[]; l3finalRow.style.display='none'; l3progress.textContent = `Round ${l3Round} / ${L3_ROUNDS}`; l3seq.textContent=''; l3answer.value=''; l3result.textContent=''; }
+    function l3Generate(){ const len = 2 + l3Round; l3Current = Array.from({length: len}, ()=> randInt(0,9)); }
+    function l3Show(){ l3Generate(); l3seq.textContent = l3Current.join(' '); const delay = 2000 + l3Current.length*250; setTimeout(()=>{ l3seq.textContent='• • •'; }, delay); }
+    function l3Submit(){ const raw = (l3answer.value||'').trim(); if(!raw){ l3result.textContent='Type the sequence.'; return; } const tokens = raw.includes(' ')? raw.split(/\s+/): raw.split(''); const guess = tokens.map(t=>parseInt(t,10)).filter(n=>!Number.isNaN(n)); const ok = guess.length===l3Current.length && guess.every((n,i)=> n===l3Current[i]); if(ok){ l3result.textContent='✅ Correct'; l3Round++; if(l3Round>L3_ROUNDS){ l3progress.textContent='Complete!'; l3result.textContent='🎉 You finished Level 3!'; l3finalRow.style.display='flex'; scoreL3 = 100; return; } l3progress.textContent=`Round ${l3Round} / ${L3_ROUNDS}`; l3answer.value=''; l3Show(); } else { l3result.textContent='❌ Incorrect. Try again or press Show.'; } }
+
+    if (toLevel4) toLevel4.addEventListener('click', ()=>{ l4Start(); });
+    if (l3show) l3show.addEventListener('click', l3Show);
+    if (l3submit) l3submit.addEventListener('click', l3Submit);
+    if (l3answer) l3answer.addEventListener('keydown', e => { if (e.key==='Enter') l3Submit(); });
+    if (l3replay) l3replay.addEventListener('click', ()=>{ l3Reset(); l3Show(); });
+    if (l3end) l3end.addEventListener('click', ()=>{ swapTo(screen1); restartGame(); });
+
+    // ===== Level 4 (rules: 15 bubbles, 7s each, end only when all found, score by attempts) =====
+    const l4grid = $('l4grid'), l4prompt = $('l4prompt'), l4time = $('l4time'), l4result = $('l4result');
+    const l4progress = $('l4progress'), l4attemptsEl = $('l4attempts'), l4accuracyEl = $('l4accuracy');
+    const l4finalRow = $('l4finalRow'), l4replay = $('l4replay'), l4back = $('l4back');
+
+    let l4Remaining = new Set();
+    let l4Attempts = 0;
+    let l4Found = 0;
+    let l4Target = null;
+    let l4Tick = null; let l4Deadline = 0;
+
+    function l4Reset(){
+      l4Remaining = new Set(Array.from({length:15}, (_,i)=> i+1));
+      l4Attempts = 0; l4Found = 0; l4Target = null; l4result.textContent = '';
+      l4progress.textContent = 'Found 0 / 15';
+      l4attemptsEl.textContent = 'Attempts: 0';
+      l4accuracyEl.textContent = 'Accuracy: 0%';
+      l4time.style.width = '100%';
+      l4finalRow.style.display = 'none';
+      l4RenderGrid();
+    }
+
+    function l4Accuracy(){ return l4Attempts ? Math.round((l4Found / l4Attempts) * 100) : 0; }
+
+    function l4Shuffle(arr){ for(let i=arr.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j]]; } return arr; }
+
+    function l4RenderGrid(){
+      const nums = l4Shuffle([...Array(15)].map((_,i)=>i+1));
+      l4grid.innerHTML = '';
+      nums.forEach(n=>{
+        const b = document.createElement('button');
+        b.className = 'bubble'; b.textContent = n; b.dataset.n = n;
+        if (!l4Remaining.has(n)) b.classList.add('done');
+        l4grid.appendChild(b);
+      });
+    }
+
+    function l4PickTarget(){
+      const rem = Array.from(l4Remaining);
+      if (rem.length === 0){ l4Finish(); return; }
+      l4Target = rem[Math.floor(Math.random()*rem.length)];
+      l4prompt.textContent = 'Find number: ' + l4Target;
+    }
+
+    function l4StartTimer(){
+      const duration = 7000; // 7 seconds fixed
+      if (l4Tick) clearInterval(l4Tick);
+      const start = performance.now();
+      l4Deadline = start + duration;
+      l4time.style.width = '100%';
+      l4Tick = setInterval(()=>{
+        const left = Math.max(0, l4Deadline - performance.now());
+        const pct = (left / duration) * 100;
+        l4time.style.width = pct + '%';
+        if (left <= 0){
+          clearInterval(l4Tick); l4Tick=null; l4Attempts++;
+          l4attemptsEl.textContent = 'Attempts: ' + l4Attempts;
+          l4accuracyEl.textContent = 'Accuracy: ' + l4Accuracy() + '%';
+          l4result.textContent = '⏳ Time up! New number…';
+          l4NextPrompt();
+        }
+      }, 50);
+    }
+
+    function l4NextPrompt(){ l4RenderGrid(); l4PickTarget(); l4StartTimer(); }
+
+    function l4HandleClick(e){
+      const btn = e.target.closest('.bubble');
+      if (!btn) return;
+      const n = parseInt(btn.dataset.n,10);
+      l4Attempts++;
+      if (n === l4Target){
+        l4Found++; l4Remaining.delete(n);
+        btn.classList.add('pop');
+        l4progress.textContent = 'Found ' + l4Found + ' / 15';
+        l4result.textContent = '🎈 Pop! Nice one.';
+        l4attemptsEl.textContent = 'Attempts: ' + l4Attempts;
+        l4accuracyEl.textContent = 'Accuracy: ' + l4Accuracy() + '%';
+        clearInterval(l4Tick); l4Tick=null; // stop current timer
+        if (l4Remaining.size === 0){ l4Finish(); }
+        else { setTimeout(l4NextPrompt, 250); }
+      } else {
+        btn.classList.add('shake'); setTimeout(()=>btn.classList.remove('shake'), 250);
+        l4result.textContent = '❌ Oops! Try again.';
+        l4attemptsEl.textContent = 'Attempts: ' + l4Attempts;
+        l4accuracyEl.textContent = 'Accuracy: ' + l4Accuracy() + '%';
+      }
+    }
+
+    function l4Finish(){
+      if (l4Tick) { clearInterval(l4Tick); l4Tick=null; }
+      l4time.style.width = '0%';
+      scoreL4 = l4Accuracy();
+      l4result.textContent = `🏁 You found all numbers! Accuracy: ${scoreL4}% (Attempts: ${l4Attempts})`;
+      confettiBurst();
+      // Show final modal with scores
+      setTimeout(()=>{ openFinalModal(); }, 600);
+      l4finalRow.style.display = 'flex';
+    }
+
+    function l4Start(){ swapTo(screen4); l4Reset(); l4PickTarget(); l4StartTimer(); }
+
+    // wire
+    l4grid.addEventListener('click', l4HandleClick);
+    if ($('toLevel4')) $('toLevel4').addEventListener('click', ()=>{ l4Start(); });
+    if (l4replay) l4replay.addEventListener('click', l4Start);
+    if (l4back) l4back.addEventListener('click', ()=>{ swapTo(screen1); restartGame(); });
+
+    // ===== minimal Level 1 restart on back from L4 =====
+    function restartGame(){ number = randInt(1,100); attempts = 0; $('attempts').textContent = 'Attempts: 0'; $('guess').value=''; setResult('Game restarted! Enter a new guess.'); if ($('heat')) $('heat').style.width='4%'; $('nextRow').style.display='none'; $('guess').focus(); }
+
+    // ===== Final scores modal =====
+    const finalModal = $('finalModal');
+    const viewScores = $('viewScores');
+    const closeModal = $('closeModal');
+    const scoreList = $('scoreList');
+    const motivateText = $('motivateText');
+
+    function openFinalModal(){ finalModal.classList.add('open'); }
+    function closeFinalModal(){ finalModal.classList.remove('open'); }
+
+    if (closeModal) closeModal.addEventListener('click', closeFinalModal);
+    if (finalModal) finalModal.addEventListener('click', (e)=>{ if(e.target===finalModal) closeFinalModal(); });
+
+    if (viewScores) viewScores.addEventListener('click', ()=>{
+      // populate score list
+      scoreList.innerHTML = '';
+      const li1 = document.createElement('li'); li1.textContent = `Level 1 – Guess the Number: ${scoreL1} points (Attempts: ${attempts})`;
+      const li2 = document.createElement('li'); li2.textContent = `Level 2 – Math Sprint: ${scoreL2} / 10 correct`;
+      const li3 = document.createElement('li'); li3.textContent = `Level 3 – Memory Challenge: ${scoreL3} points (7 rounds completed)`;
+      const li4 = document.createElement('li'); li4.textContent = `Level 4 – Number Chase: ${scoreL4}% accuracy`;
+      [li1,li2,li3,li4].forEach(li=>scoreList.appendChild(li));
+
+      // motivational line for kids
+      const lines = [
+        'You are a number ninja! Keep practicing and you will be unstoppable! 💪',
+        'Great job! Every try makes your brain stronger. 🌟',
+        'Math hero in the making! See you at the next quest! 🦸‍♀️🦸‍♂️',
+        'Brilliant! Your focus and speed are amazing—keep going! 🚀'
+      ];
+      motivateText.textContent = lines[Math.floor(Math.random()*lines.length)];
+      $('scoresBox').style.display = 'block';
+    });
+  </script>
+   <div id="footer">
+    Created by Maria Manuel
+  </div>
+</body>
+</html>
+</body>
+</html>
