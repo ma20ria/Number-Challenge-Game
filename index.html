@@ -33,8 +33,7 @@
     .timer{height:12px;border-radius:999px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);overflow:hidden;margin:8px 0 10px}
     .timer>i{display:block;height:100%;width:100%;background:linear-gradient(90deg,#34d399,#3b82f6);transition:width .15s linear}
     .grid{display:grid;grid-template-columns:repeat(5, minmax(0,1fr));gap:10px;margin-top:8px}
-    .bubble{aspect-ratio:1/1;border-radius:999px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:20px;
-      background:linear-gradient(135deg,rgba(255,255,255,.95),rgba(255,255,255,.85));color:#111;border:2px solid rgba(0,0,0,.08);cursor:pointer;user-select:none;box-shadow:0 6px 14px rgba(0,0,0,.25)}
+    .bubble{aspect-ratio:1/1;border-radius:999px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:20px;background:linear-gradient(135deg,rgba(255,255,255,.95),rgba(255,255,255,.85));color:#111;border:2px solid rgba(0,0,0,.08);cursor:pointer;user-select:none;box-shadow:0 6px 14px rgba(0,0,0,.25)}
     .bubble:active{transform:translateY(1px)}
     .bubble.pop{animation:pop .25s ease}
     .bubble.done{opacity:.45; filter:saturate(.4)}
@@ -48,17 +47,7 @@
     .scorelist{margin:10px 0 0;padding:0;list-style:none}
     .scorelist li{padding:8px 10px;border-radius:10px;background:#f3f4f6;margin:6px 0;font-weight:700}
     .motivate{margin-top:12px;font-weight:700}
-     #footer {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  width: 100%;
-  background: #333;
-  color: white;
-  padding: 10px;
-  font-size: 14px;
-  text-align: center;
-}
+    #footer{position:fixed;bottom:0;left:0;width:100%;background:#333;color:#fff;padding:10px;font-size:14px;text-align:center}
   </style>
 </head>
 <body>
@@ -220,7 +209,6 @@
     const heatBar   = $('heat');
     const card      = $('game');
     const nextRow   = $('nextRow');
-    const nextBtn   = $('nextLevelBtn');
 
     if (best) bestEl.textContent = `Best: ${best}`;
     if (heatBar) heatBar.style.width = '4%';
@@ -238,8 +226,7 @@
         setResult('🎉 Correct!');
         if (!best || attempts < best){ best = attempts; localStorage.setItem('guess_best_1to100', String(best)); bestEl.textContent = `Best: ${best}`; }
         updateHeat(0); confettiBurst(); nextRow.style.display = 'flex';
-        // simple L1 score: fewer attempts → higher score
-        scoreL1 = Math.max(10, 110 - attempts*10); // 100 if guessed first try, floors at 10
+        scoreL1 = Math.max(10, 110 - attempts*10); // 100 if first try
         return;
       }
       const diff = Math.abs(guess - number); updateHeat(diff); setResult(proximityText(guess, number), true);
@@ -296,7 +283,7 @@
     if (l3replay) l3replay.addEventListener('click', ()=>{ l3Reset(); l3Show(); });
     if (l3end) l3end.addEventListener('click', ()=>{ swapTo(screen1); restartGame(); });
 
-    // ===== Level 4 (rules: 15 bubbles, 7s each, end only when all found, score by attempts) =====
+    // ===== Level 4 (15 bubbles, 7s each, finish only when all found) =====
     const l4grid = $('l4grid'), l4prompt = $('l4prompt'), l4time = $('l4time'), l4result = $('l4result');
     const l4progress = $('l4progress'), l4attemptsEl = $('l4attempts'), l4accuracyEl = $('l4accuracy');
     const l4finalRow = $('l4finalRow'), l4replay = $('l4replay'), l4back = $('l4back');
@@ -306,9 +293,12 @@
     let l4Found = 0;
     let l4Target = null;
     let l4Tick = null; let l4Deadline = 0;
+    // Track actually found numbers so only popped items are greyed
+    let l4FoundSet = new Set();
 
     function l4Reset(){
       l4Remaining = new Set(Array.from({length:15}, (_,i)=> i+1));
+      l4FoundSet = new Set();
       l4Attempts = 0; l4Found = 0; l4Target = null; l4result.textContent = '';
       l4progress.textContent = 'Found 0 / 15';
       l4attemptsEl.textContent = 'Attempts: 0';
@@ -320,7 +310,13 @@
 
     function l4Accuracy(){ return l4Attempts ? Math.round((l4Found / l4Attempts) * 100) : 0; }
 
-    function l4Shuffle(arr){ for(let i=arr.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j]]; } return arr; }
+    function l4Shuffle(arr){
+      for(let i=arr.length-1;i>0;i--){
+        const j=Math.floor(Math.random()*(i+1));
+        [arr[i],arr[j]]=[arr[j],arr[i]]; // correct swap
+      }
+      return arr;
+    }
 
     function l4RenderGrid(){
       const nums = l4Shuffle([...Array(15)].map((_,i)=>i+1));
@@ -328,7 +324,7 @@
       nums.forEach(n=>{
         const b = document.createElement('button');
         b.className = 'bubble'; b.textContent = n; b.dataset.n = n;
-        if (!l4Remaining.has(n)) b.classList.add('done');
+        if (l4FoundSet.has(n)) b.classList.add('done'); // only dim if previously popped
         l4grid.appendChild(b);
       });
     }
@@ -368,7 +364,7 @@
       const n = parseInt(btn.dataset.n,10);
       l4Attempts++;
       if (n === l4Target){
-        l4Found++; l4Remaining.delete(n);
+        l4Found++; l4Remaining.delete(n); l4FoundSet.add(n);
         btn.classList.add('pop');
         l4progress.textContent = 'Found ' + l4Found + ' / 15';
         l4result.textContent = '🎈 Pop! Nice one.';
@@ -391,7 +387,6 @@
       scoreL4 = l4Accuracy();
       l4result.textContent = `🏁 You found all numbers! Accuracy: ${scoreL4}% (Attempts: ${l4Attempts})`;
       confettiBurst();
-      // Show final modal with scores
       setTimeout(()=>{ openFinalModal(); }, 600);
       l4finalRow.style.display = 'flex';
     }
@@ -421,7 +416,6 @@
     if (finalModal) finalModal.addEventListener('click', (e)=>{ if(e.target===finalModal) closeFinalModal(); });
 
     if (viewScores) viewScores.addEventListener('click', ()=>{
-      // populate score list
       scoreList.innerHTML = '';
       const li1 = document.createElement('li'); li1.textContent = `Level 1 – Guess the Number: ${scoreL1} points (Attempts: ${attempts})`;
       const li2 = document.createElement('li'); li2.textContent = `Level 2 – Math Sprint: ${scoreL2} / 10 correct`;
@@ -429,7 +423,6 @@
       const li4 = document.createElement('li'); li4.textContent = `Level 4 – Number Chase: ${scoreL4}% accuracy`;
       [li1,li2,li3,li4].forEach(li=>scoreList.appendChild(li));
 
-      // motivational line for kids
       const lines = [
         'You are a number ninja! Keep practicing and you will be unstoppable! 💪',
         'Great job! Every try makes your brain stronger. 🌟',
@@ -440,10 +433,7 @@
       $('scoresBox').style.display = 'block';
     });
   </script>
-   <div id="footer">
-    Created by Maria Manuel
-  </div>
-</body>
-</html>
+
+  <div id="footer">Created by Maria Manuel</div>
 </body>
 </html>
